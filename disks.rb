@@ -38,6 +38,7 @@ if Facter.value(:kernel) == "Linux"
 					rescue
 					end
 				end
+			when "TEAC" # Ignore CD drives
 			else
 				Facter.debug "unknown vendor #{vendor} for #{device}"
 			end
