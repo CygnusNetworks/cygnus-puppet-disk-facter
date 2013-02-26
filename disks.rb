@@ -43,7 +43,7 @@ if Facter.value(:kernel) == "Linux"
 				Facter.debug "unknown vendor #{vendor} for #{device}"
 			end
 		rescue
-			Facter.debug $!.to_s
+			Facter.debug "exception while processing #{device}: " + $!.to_s
 		end
 	end
 	Facter.add(:disks) { setcode { (disks.collect(&:devid)).join(",") } }
