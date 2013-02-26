@@ -8,8 +8,9 @@ class DiskInfo
 		@device = device
 		output = Facter::Util::Resolution.exec("smartctl -i -d #{type} /dev/#{smartdev}")
 		raise "missing smartctl?" unless output
-		@model = output[/^Device Model:     (.*)/,1]
-		@serial = output[/^Serial Number:    (.*)/,1]
+		@model = output[/^Device Model: +(.*)/,1]
+		@model = output[/^Product: +(.*)/,1] unless @model
+		@serial = output[/^Serial [Nn]umber: +(.*)/,1]
 		raise "model not found for #{devid}" unless @model
 		raise "serial not found for #{devid}" unless @serial
 	end
@@ -25,6 +26,8 @@ if Facter.value(:kernel) == "Linux"
 			case vendor
 			when "ATA"
 				disks << DiskInfo.new(device, device, "ata", device)
+			when "IBM-ESXS"
+				disks << DiskInfo.new(device, device, "scsi", device)
 			when "AMCC"
 				if device == "sda" then
 					(0..127).each do |n|
