@@ -1,11 +1,13 @@
 class DiskInfo
 	attr_accessor :devid
 	attr_accessor :device
+	attr_accessor :vendor
 	attr_accessor :model
 	attr_accessor :serial
-	def initialize(devid, device, type, smartdev)
+	def initialize(devid, device, vendor, type, smartdev)
 		@devid = devid
 		@device = device
+		@vendor = vendor
 		output = Facter::Util::Resolution.exec("smartctl -i -d #{type} /dev/#{smartdev}")
 		raise "missing smartctl?" unless output
 		@model = output[/^Device Model: +(.*)/,1]
@@ -25,19 +27,19 @@ if Facter.value(:kernel) == "Linux"
 			vendor = File.read(path).rstrip
 			case vendor
 			when "ATA"
-				disks << DiskInfo.new(device, device, "ata", device)
+				disks << DiskInfo.new(device, device, vendor, "ata", device)
 			when "IBM-ESXS"
-				disks << DiskInfo.new(device, device, "scsi", device)
+				disks << DiskInfo.new(device, device, vendor, "scsi", device)
 			when "AMCC"
 				if device == "sda" then
 					(0..127).each do |n|
-						disks << DiskInfo.new("#{device}_#{n}", device, "3ware,#{n}", "twa0")
+						disks << DiskInfo.new("#{device}_#{n}", device, vendor, "3ware,#{n}", "twa0")
 					end
 				end
 			when "LSI"
 				(0..32).each do |n|
 					begin
-						disks << DiskInfo.new("#{device}_#{n}", device, "megaraid,#{n}", device)
+						disks << DiskInfo.new("#{device}_#{n}", device, vendor, "megaraid,#{n}", device)
 					rescue
 					end
 				end
@@ -51,6 +53,7 @@ if Facter.value(:kernel) == "Linux"
 	end
 	Facter.add(:disks) { setcode { (disks.collect(&:devid)).join(",") } }
 	disks.each do |disk|
+		Facter.add("disk_vendor_#{disk.devid}") { setcode { disk.vendor } }
 		Facter.add("disk_model_#{disk.devid}") { setcode { disk.model } }
 		Facter.add("disk_serial_#{disk.devid}") { setcode { disk.serial } }
 	end
