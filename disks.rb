@@ -37,12 +37,14 @@ if Facter.value(:kernel) == "Linux"
 					end
 				end
 			when "LSI"
+				# TODO: some LSI devices apparently only expose serials via tw-cli
 				(0..32).each do |n|
 					begin
 						disks << DiskInfo.new("#{device}_#{n}", device, vendor, "megaraid,#{n}", device)
 					rescue
 					end
 				end
+			# TODO: when "LSILOGIC" run smartctl on the sgN backing devices
 			when "TEAC" # Ignore CD drives
 			else
 				Facter.debug "unknown vendor #{vendor} for #{device}"
