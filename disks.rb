@@ -35,11 +35,19 @@ class DiskInfo
 	end
 end
 
+class DumbDiskInfo < DiskInfo
+	attr_accessor :model
+	attr_accessor :serial
+	def initialize(devid, model, serial)
+		super(devid)
+		@model = model
+		@serial = serial
+	end
+end
+
 class SmartDiskInfo < DiskInfo
 	attr_accessor :smartdev
 	attr_accessor :smarttype
-	attr_accessor :model
-	attr_accessor :serial
 	def initialize(devid, smartdev, smarttype)
 		super(devid)
 		@smartdev = smartdev
@@ -65,6 +73,22 @@ class SmartDiskInfo < DiskInfo
 	end
 end
 
+def twcli_query(devicename, controller)
+	output = Facter::Util::Resolution.exec("tw-cli /c#{controller} show drivestatus")
+	raise "missing tw-cli?" unless output
+	disks = []
+	output.scan(/^p([0-9]+) /) do |port,|
+		portpath = "/c#{controller}/p#{port}"
+		Facter.debug "found port #{portpath}"
+		model = Facter::Util::Resolution.exec("tw-cli #{portpath} show model")[/ = (.*)/,1]
+		raise "no model found for tw-cli #{portpath}" unless model
+		serial = Facter::Util::Resolution.exec("tw-cli #{portpath} show serial")[/ = (.*)/,1]
+		raise "no serial found for tw-cli #{portpath}" unless model
+		disks << DumbDiskInfo.new("#{devicename}_#{port}", model, serial)
+	end
+	return disks
+end
+
 if Facter.value(:kernel) == "Linux"
 	blockdevs = []
 	Dir.glob("/sys/block/sd?") do |path|
@@ -78,7 +102,8 @@ if Facter.value(:kernel) == "Linux"
 			#when vendor == IBM-ESXS and driver == mptspi
 			#	device.disks << SmartDiskInfo(device.device, device.device, "scsi")
 			when "3w-9xxx"
-				raise "unknown backing device #{device} for 3w-9xxx" unless device.device == "sda"
+				raise "unknown backing device #{device.device} for 3w-9xxx" unless device.device == "sda"
+				# guessing that sda maps to twa0
 				(0..127).each do |n|
 					device.disks << SmartDiskInfo.new("#{device.device}_#{n}", "twa0", "3ware,#{n}")
 				end
@@ -90,7 +115,10 @@ if Facter.value(:kernel) == "Linux"
 					end
 				end
 				raise "no disks found for #{device.device}" unless device.disks
-			# TODO: when vendor == LSI and driver == 3w-sas, devices apparently only expose serials via tw-cli
+			when "3w-sas"
+				raise "unknown backing device #{device.device} for 3w-sas" unless device.device == "sda"
+				# guessing that sda maps to the first controller
+				device.disks = twcli_query("sda", 0)
 			# TODO: when vendor == LSILOGIC and driver == mptspi run smartctl on the sgN backing devices
 			else
 				Facter.debug "unknown driver #{device.driver} for #{device.device}"
