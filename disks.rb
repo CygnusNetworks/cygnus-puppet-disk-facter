@@ -16,13 +16,11 @@ end
 class DiskInfo
 	attr_accessor :devid
 	attr_accessor :device
-	attr_accessor :vendor
 	attr_accessor :model
 	attr_accessor :serial
-	def initialize(devid, device, vendor, type, smartdev)
+	def initialize(devid, device, type, smartdev)
 		@devid = devid
 		@device = device
-		@vendor = vendor
 		output = Facter::Util::Resolution.exec("smartctl -i -d #{type} /dev/#{smartdev}")
 		raise "missing smartctl?" unless output
 		@model = output[/^Device Model: +(.*)/,1]
@@ -35,6 +33,10 @@ class DiskInfo
 	def driver
 		return get_driver(@device)
 	end
+
+	def vendor
+		return File.read("/sys/block/#{device}/device/vendor").rstrip
+	end
 end
 
 if Facter.value(:kernel) == "Linux"
@@ -42,31 +44,29 @@ if Facter.value(:kernel) == "Linux"
 	Dir.glob("/sys/block/sd?/device/vendor") do |path|
 		begin
 			device = path[/sd./]
+			driver = get_driver(device)
 
-			vendor = File.read(path).rstrip
-			case vendor
-			when "ATA"
-				disks << DiskInfo.new(device, device, vendor, "ata", device)
-			when "IBM-ESXS"
-				disks << DiskInfo.new(device, device, vendor, "scsi", device)
-			when "AMCC"
-				if device == "sda" then
-					(0..127).each do |n|
-						disks << DiskInfo.new("#{device}_#{n}", device, vendor, "3ware,#{n}", "twa0")
-					end
+			case driver
+			when "ahci"
+				disks << DiskInfo.new(device, device, "ata", device)
+			#when vendor == IBM-ESXS and driver == mptspi
+			#	disks << DiskInfo.new(device, device, "scsi", device)
+			when "3w-9xxx"
+				raise "unknown backing device #{device} for 3w-9xxx" unless device == "sda"
+				(0..127).each do |n|
+					disks << DiskInfo.new("#{device}_#{n}", device, "3ware,#{n}", "twa0")
 				end
-			when "LSI"
-				# TODO: some LSI devices apparently only expose serials via tw-cli
+			when "megaraid_sas"
 				(0..32).each do |n|
 					begin
-						disks << DiskInfo.new("#{device}_#{n}", device, vendor, "megaraid,#{n}", device)
+						disks << DiskInfo.new("#{device}_#{n}", device, "megaraid,#{n}", device)
 					rescue
 					end
 				end
-			# TODO: when "LSILOGIC" run smartctl on the sgN backing devices
-			when "TEAC" # Ignore CD drives
+			# TODO: when vendor == LSI and driver == 3w-sas, devices apparently only expose serials via tw-cli
+			# TODO: when vendor == LSILOGIC and driver == mptspi run smartctl on the sgN backing devices
 			else
-				Facter.debug "unknown vendor #{vendor} for #{device}"
+				Facter.debug "unknown driver #{driver} for #{device}"
 			end
 		rescue
 			Facter.debug "exception while processing #{device}: " + $!.to_s
