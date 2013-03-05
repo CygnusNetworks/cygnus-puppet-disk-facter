@@ -1,3 +1,18 @@
+def get_driver(device)
+	devpath = File.readlink("/sys/block/#{device}")
+	raise "device #{device} not found" unless devpath
+	parts = devpath.split(/\//)
+	raise "bad link for #{device}" unless parts.shift == ".."
+	raise "bad link for #{device}" unless parts.shift == "devices"
+	raise "non-pci device #{device}" unless parts.first.start_with?("pci")
+	driverlink = ["", "sys", "devices", parts.shift]
+	driverlink.concat(parts.take_while { |p| p.match(/^[0-9a-f:.]+$/i) })
+	driverlink << "driver"
+	driverpath = File.readlink(driverlink.join("/"))
+	raise "no driver for #{device}" unless driverpath
+	return driverpath.split(/\//).last
+end
+
 class DiskInfo
 	attr_accessor :devid
 	attr_accessor :device
@@ -16,14 +31,18 @@ class DiskInfo
 		raise "model not found for #{devid}" unless @model
 		raise "serial not found for #{devid}" unless @serial
 	end
-end
 
+	def driver
+		return get_driver(@device)
+	end
+end
 
 if Facter.value(:kernel) == "Linux"
 	disks = []
 	Dir.glob("/sys/block/sd?/device/vendor") do |path|
 		begin
 			device = path[/sd./]
+
 			vendor = File.read(path).rstrip
 			case vendor
 			when "ATA"
@@ -57,6 +76,7 @@ if Facter.value(:kernel) == "Linux"
 	disks.each do |disk|
 		Facter.add("disk_vendor_#{disk.devid}") { setcode { disk.vendor } }
 		Facter.add("disk_model_#{disk.devid}") { setcode { disk.model } }
-		Facter.add("disk_serial_#{disk.devid}") { setcode { disk.serial } }
+	Facter.add("disk_serial_#{disk.devid}") { setcode { disk.serial } }
+	Facter.add("disk_driver_#{disk.devid}") { setcode { disk.driver } }
 	end
 end
