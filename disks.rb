@@ -73,16 +73,32 @@ class SmartDiskInfo < DiskInfo
 	end
 end
 
+def find_path(tool)
+	minimal_path = ["/bin", "/sbin", "/usr/bin", "/usr/sbin"]
+	(Facter.value(:path).split(":") + minimal_path).each do |dir|
+		toolpath = "#{dir}/#{tool}"
+		return toolpath if FileTest.executable?(toolpath)
+	end
+	nil
+end
+
+Facter.add(:twcli_path) do
+	confine :kernel => "Linux"
+	setcode { find_path("tw-cli") || find_path("tw_cli") }
+end
+
 def twcli_query(devicename, controller)
-	output = Facter::Util::Resolution.exec("tw-cli /c#{controller} show drivestatus")
+	twcli = Facter.value(:twcli_path)
+	raise "no tw-cli tool found" unless twcli
+	output = Facter::Util::Resolution.exec("#{twcli} /c#{controller} show drivestatus")
 	raise "missing tw-cli?" unless output
 	disks = []
 	output.scan(/^p([0-9]+) /) do |port,|
 		portpath = "/c#{controller}/p#{port}"
 		Facter.debug "found port #{portpath}"
-		model = Facter::Util::Resolution.exec("tw-cli #{portpath} show model")[/ = (.*)/,1]
+		model = Facter::Util::Resolution.exec("#{twcli} #{portpath} show model")[/ = (.*)/,1]
 		raise "no model found for tw-cli #{portpath}" unless model
-		serial = Facter::Util::Resolution.exec("tw-cli #{portpath} show serial")[/ = (.*)/,1]
+		serial = Facter::Util::Resolution.exec("#{twcli} #{portpath} show serial")[/ = (.*)/,1]
 		raise "no serial found for tw-cli #{portpath}" unless model
 		disks << DumbDiskInfo.new("#{devicename}_#{port}", model, serial)
 	end
