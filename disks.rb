@@ -144,8 +144,6 @@ if Facter.value(:kernel) == "Linux"
 			case device.driver
 			when "ahci"
 				device.disks << SmartDiskInfo.new(device.device, device.device, "ata")
-			#when vendor == IBM-ESXS and driver == mptspi
-			#	device.disks << SmartDiskInfo(device.device, device.device, "scsi")
 			when "3w-9xxx"
 				raise "unknown backing device #{device.device} for 3w-9xxx" unless device.device == "sda"
 				# guessing that sda maps to twa0
@@ -166,7 +164,11 @@ if Facter.value(:kernel) == "Linux"
 				controller = 0
 				device.raidtype = twcli_query_raidtype(controller)
 				device.disks = twcli_query_disks("sda", controller)
-			# TODO: when vendor == LSILOGIC and driver == mptspi run smartctl on the sgN backing devices
+			when "mptspi"
+				# can be raid or plain scsi device. guess plain scsi device.
+				device.disks << SmartDiskInfo.new(device.device, device.device, "scsi")
+				# when no serial is found, this likely is a raid
+				# TODO: run smartctl on the backing sgN devices
 			else
 				Facter.debug "unknown driver #{device.driver} for #{device.device}"
 			end
