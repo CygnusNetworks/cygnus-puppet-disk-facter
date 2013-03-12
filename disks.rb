@@ -53,15 +53,14 @@ class DiskInfo
 end
 
 def split_vendor(string)
-	parts = string.split(/ /, 2)
-	if parts.length < 2 then
-		return [nil, string]
-	end
-	parts.first.upcase!
-	case parts.first
-	when "HITACHI", "INTEL", "SAMSUNG", "TOSHIBA", "VBOX", "WDC"
-		return parts
-	end
+	known_vendors = ["HITACHI", "INTEL", "SAMSUNG", "TOSHIBA", "VBOX", "WDC"]
+	parts = string.partition(/ /)
+	return [nil, string] unless parts.first
+	vendor = parts.first.upcase
+	return [vendor, parts[2]] if known_vendors.include? vendor
+	parts = string.rpartition(/ /)
+	vendor = parts.last.upcase
+	return [vendor, parts[0]] if known_vendors.include? vendor
 	return [nil, string]
 end
 
