@@ -122,7 +122,7 @@ end
 def twcli_query_disks(devicename, controller)
 	output = twcli_exec("/c#{controller}", "show drivestatus")
 	disks = []
-	output.scan(/^p([0-9]+) /) do |port,|
+	output.scan(/^p([0-9]+) +OK/) do |port,|
 		portpath = "/c#{controller}/p#{port}"
 		Facter.debug "found port #{portpath}"
 		model = twcli_exec(portpath, "show model")[/ = (.*)/,1]
