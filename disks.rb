@@ -191,9 +191,23 @@ if Facter.value(:kernel) == "Linux"
 				device.disks = twcli_query_disks("sda", controller)
 			when "mptspi"
 				# can be raid or plain scsi device. guess plain scsi device.
-				device.disks << SmartDiskInfo.new(device.device, device.device, "scsi")
-				# when no serial is found, this likely is a raid
-				# TODO: run smartctl on the backing sgN devices
+				begin
+					device.disks << SmartDiskInfo.new(device.device, device.device, "scsi")
+				rescue
+					Facter.debug "mptspi device #{device.device} appears not to be a disk: " + $!.to_s
+					# maybe the serial was not found, because it is not a disk
+					# we assume that this is a raid and all unassigned sg devices belong to it
+					Dir.glob("/sys/class/scsi_generic/sg?/device") do |sgpath|
+						nth = sgpath[/sg(.)/,1]
+						unless FileTest.exist?("#{sgpath}/block") then
+							begin
+								device.disks << SmartDiskInfo.new("#{device.device}_#{nth}", "sg#{nth}", "scsi")
+							rescue
+								# ignore processors and such
+							end
+						end
+					end
+				end
 			when "ehci_hcd", "uhci_hcd"
 				blockdevs.pop # ignore pluggable usb devices
 			else
