@@ -129,30 +129,34 @@ Facter.add(:twcli_path) do
 	setcode { find_path("tw-cli") || find_path("tw_cli") }
 end
 
-def twcli_exec(path, command)
+def twcli_exec(command)
 	twcli = Facter.value(:twcli_path)
 	raise "no tw-cli tool found" unless twcli
-	output = Facter::Util::Resolution.exec("#{twcli} #{path} #{command}")
-	raise "no output from tw-cli. binary missing?" unless output
+	output = Facter::Util::Resolution.exec("#{twcli} #{command}")
+	raise "no output from tw-cli #{command}. binary missing?" unless output
 	return output
+end
+
+def twcli_query_controllers()
+	twcli_exec("show").scan(/^c([0-9]+)/).collect(&:first)
 end
 
 def twcli_query_raidtype(controller)
 	cpath = "/c#{controller}"
-	raidtype = twcli_exec(cpath, "show unitstatus")[/^u[0-9]+ +RAID-([0-9]+)/,1]
+	raidtype = twcli_exec("#{cpath} show unitstatus")[/^u[0-9]+ +RAID-([0-9]+)/,1]
 	raise "unable to detect raidtype for #{cpath}" unless raidtype
 	return raidtype
 end
 
 def twcli_query_disks(devicename, controller)
-	output = twcli_exec("/c#{controller}", "show drivestatus")
+	output = twcli_exec("/c#{controller} show drivestatus")
 	disks = []
 	output.scan(/^p([0-9]+) +OK/) do |port,|
 		portpath = "/c#{controller}/p#{port}"
 		Facter.debug "found port #{portpath}"
-		model = twcli_exec(portpath, "show model")[/ = (.*)/,1]
+		model = twcli_exec("#{portpath} show model")[/ = (.*)/,1]
 		raise "no model found for tw-cli #{portpath}" unless model
-		serial = twcli_exec(portpath, "show serial")[/ = (.*)/,1]
+		serial = twcli_exec("#{portpath} show serial")[/ = (.*)/,1]
 		raise "no serial found for tw-cli #{portpath}" unless model
 		disks << DumbDiskInfo.new("#{devicename}_#{port}", nil, model, serial)
 	end
@@ -177,10 +181,12 @@ if Facter.value(:kernel) == "Linux"
 					end
 				end
 				raise "no disks found for #{device.device}" unless device.disks
-			when "3w-9xxx", "3w-sas"
+			when "3w-9xxx", "3w-sas", "3w-xxxx"
 				raise "unknown backing device #{device.device} for #{device.driver}" unless device.device == "sda"
-				# guessing that sda maps to the first controller
-				controller = 0
+				controllers = twcli_query_controllers
+				raise "no tw-cli controllers found" unless controllers
+				# guessing that sda maps to the first existent controller
+				controller = controllers.first
 				device.raidtype = twcli_query_raidtype(controller)
 				device.disks = twcli_query_disks("sda", controller)
 			when "mptspi"
