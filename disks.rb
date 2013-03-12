@@ -111,7 +111,7 @@ class SmartDiskInfo < DiskInfo
 		return @serial
 	end
 	def vendor_model=(string)
-		@vendor, @model = split_vendor(string)
+		@vendor, @model = split_vendor(string) if string
 	end
 end
 
