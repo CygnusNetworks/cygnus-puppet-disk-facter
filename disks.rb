@@ -144,12 +144,6 @@ if Facter.value(:kernel) == "Linux"
 			case device.driver
 			when "ahci", "ata_piix", "sata_via"
 				device.disks << SmartDiskInfo.new(device.device, device.device, "ata")
-			when "3w-9xxx"
-				raise "unknown backing device #{device.device} for 3w-9xxx" unless device.device == "sda"
-				# guessing that sda maps to twa0
-				(0..127).each do |n|
-					device.disks << SmartDiskInfo.new("#{device.device}_#{n}", "twa0", "3ware,#{n}")
-				end
 			when "megaraid_sas"
 				(0..32).each do |n|
 					begin
@@ -158,8 +152,8 @@ if Facter.value(:kernel) == "Linux"
 					end
 				end
 				raise "no disks found for #{device.device}" unless device.disks
-			when "3w-sas"
-				raise "unknown backing device #{device.device} for 3w-sas" unless device.device == "sda"
+			when "3w-9xxx", "3w-sas"
+				raise "unknown backing device #{device.device} for #{device.driver}" unless device.device == "sda"
 				# guessing that sda maps to the first controller
 				controller = 0
 				device.raidtype = twcli_query_raidtype(controller)
