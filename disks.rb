@@ -179,6 +179,7 @@ if Facter.value(:kernel) == "Linux"
 		Facter.add("block_vendor_#{device.device}") { setcode { device.vendor } }
 		Facter.add("block_driver_#{device.device}") { setcode { device.driver } }
 		Facter.add("block_disks_#{device.device}") { setcode { (device.disks.collect(&:devid)).join(",") } }
+		Facter.add("block_is_raid_#{device.device}") { setcode { (device.disks.length > 1).to_s } }
 		Facter.add("block_raidtype_#{device.device}") { setcode { device.raidtype } } if device.raidtype
 		device.disks.each do |disk|
 			Facter.add("disk_model_#{disk.devid}") { setcode { disk.model } }
