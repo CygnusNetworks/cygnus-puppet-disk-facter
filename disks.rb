@@ -53,7 +53,7 @@ class DiskInfo
 end
 
 def split_vendor(string)
-	known_vendors = ["HITACHI", "INTEL", "SAMSUNG", "TOSHIBA", "VBOX", "WDC"]
+	known_vendors = ["HITACHI", "INTEL", "SAMSUNG", "SEAGATE", "TOSHIBA", "VBOX", "WDC"]
 	parts = string.partition(/ /)
 	return [nil, string] unless parts.first
 	vendor = parts.first.upcase
