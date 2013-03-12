@@ -169,6 +169,7 @@ if Facter.value(:kernel) == "Linux"
 				device.disks << SmartDiskInfo.new(device.device, device.device, "scsi")
 				# when no serial is found, this likely is a raid
 				# TODO: run smartctl on the backing sgN devices
+			when "uchi_hcd" # ignore pluggable usb devices
 			else
 				Facter.debug "unknown driver #{device.driver} for #{device.device}"
 			end
