@@ -30,10 +30,12 @@ end
 
 class BlockInfo
 	attr_accessor :device
+	attr_accessor :raidtype
 	attr_accessor :disks
 	def initialize(device)
 		@device = device
 		@disks = []
+		@raidtype = nil
 	end
 	def driver
 		@driver ||= get_driver(@device)
@@ -102,18 +104,30 @@ Facter.add(:twcli_path) do
 	setcode { find_path("tw-cli") || find_path("tw_cli") }
 end
 
-def twcli_query(devicename, controller)
+def twcli_exec(path, command)
 	twcli = Facter.value(:twcli_path)
 	raise "no tw-cli tool found" unless twcli
-	output = Facter::Util::Resolution.exec("#{twcli} /c#{controller} show drivestatus")
-	raise "missing tw-cli?" unless output
+	output = Facter::Util::Resolution.exec("#{twcli} #{path} #{command}")
+	raise "no output from tw-cli. binary missing?" unless output
+	return output
+end
+
+def twcli_query_raidtype(controller)
+	cpath = "/c#{controller}"
+	raidtype = twcli_exec(cpath, "show unitstatus")[/^u[0-9]+ +RAID-([0-9]+)/,1]
+	raise "unable to detect raidtype for #{cpath}" unless raidtype
+	return raidtype
+end
+
+def twcli_query_disks(devicename, controller)
+	output = twcli_exec("/c#{controller}", "show drivestatus")
 	disks = []
 	output.scan(/^p([0-9]+) /) do |port,|
 		portpath = "/c#{controller}/p#{port}"
 		Facter.debug "found port #{portpath}"
-		model = Facter::Util::Resolution.exec("#{twcli} #{portpath} show model")[/ = (.*)/,1]
+		model = twcli_exec(portpath, "show model")[/ = (.*)/,1]
 		raise "no model found for tw-cli #{portpath}" unless model
-		serial = Facter::Util::Resolution.exec("#{twcli} #{portpath} show serial")[/ = (.*)/,1]
+		serial = twcli_exec(portpath, "show serial")[/ = (.*)/,1]
 		raise "no serial found for tw-cli #{portpath}" unless model
 		disks << DumbDiskInfo.new("#{devicename}_#{port}", model, serial)
 	end
@@ -149,7 +163,9 @@ if Facter.value(:kernel) == "Linux"
 			when "3w-sas"
 				raise "unknown backing device #{device.device} for 3w-sas" unless device.device == "sda"
 				# guessing that sda maps to the first controller
-				device.disks = twcli_query("sda", 0)
+				controller = 0
+				device.raidtype = twcli_query_raidtype(controller)
+				device.disks = twcli_query_disks("sda", controller)
 			# TODO: when vendor == LSILOGIC and driver == mptspi run smartctl on the sgN backing devices
 			else
 				Facter.debug "unknown driver #{device.driver} for #{device.device}"
@@ -163,6 +179,7 @@ if Facter.value(:kernel) == "Linux"
 		Facter.add("block_vendor_#{device.device}") { setcode { device.vendor } }
 		Facter.add("block_driver_#{device.device}") { setcode { device.driver } }
 		Facter.add("block_disks_#{device.device}") { setcode { (device.disks.collect(&:devid)).join(",") } }
+		Facter.add("block_raidtype_#{device.device}") { setcode { device.raidtype } } if device.raidtype
 		device.disks.each do |disk|
 			Facter.add("disk_model_#{disk.devid}") { setcode { disk.model } }
 			Facter.add("disk_serial_#{disk.devid}") { setcode { disk.serial } }
