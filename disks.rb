@@ -52,12 +52,31 @@ class DiskInfo
 	end
 end
 
+def split_vendor(string)
+	parts = string.split(/ /, 2)
+	if parts.length < 2 then
+		return [nil, string]
+	end
+	parts.first.upcase!
+	case parts.first
+	when "HITACHI", "INTEL", "SAMSUNG", "TOSHIBA", "VBOX", "WDC"
+		return parts
+	end
+	return [nil, string]
+end
+
 class DumbDiskInfo < DiskInfo
+	attr_accessor :vendor
 	attr_accessor :model
 	attr_accessor :serial
-	def initialize(devid, model, serial)
+	def initialize(devid, vendor, model, serial)
 		super(devid)
-		@model = model
+		@vendor = vendor
+		if not vendor then
+			@vendor, @model = split_vendor(model)
+		else
+			@model = model
+		end
 		@serial = serial
 	end
 end
@@ -74,11 +93,15 @@ class SmartDiskInfo < DiskInfo
 	def run_smartctl
 		output = Facter::Util::Resolution.exec("smartctl -i -d #{@smarttype} /dev/#{@smartdev}")
 		raise "missing smartctl?" unless output
-		@model = output[/^Device Model: +(.*)/,1]
-		@model = output[/^Product: +(.*)/,1] unless @model
+		self.vendor_model = output[/^Device Model: +(.*)/,1]
+		self.vendor_model = output[/^Product: +(.*)/,1] unless @model
 		@serial = output[/^Serial [Nn]umber: +(.*)/,1]
 		raise "model not found for #{devid}" unless @model
 		raise "serial not found for #{devid}" unless @serial
+	end
+	def vendor
+		run_smartctl unless @model # @vendor may be legitimately nil
+		return @vendor
 	end
 	def model
 		run_smartctl unless @model
@@ -87,6 +110,9 @@ class SmartDiskInfo < DiskInfo
 	def serial
 		run_smartctl unless @serial
 		return @serial
+	end
+	def vendor_model=(string)
+		@vendor, @model = split_vendor(string)
 	end
 end
 
@@ -182,6 +208,7 @@ if Facter.value(:kernel) == "Linux"
 		end
 		Facter.add("block_raidtype_#{device.device}") { setcode { device.raidtype } } if device.raidtype
 		device.disks.each do |disk|
+			Facter.add("disk_vendor_#{disk.devid}") { setcode { disk.vendor } } if disk.vendor
 			Facter.add("disk_model_#{disk.devid}") { setcode { disk.model } }
 			Facter.add("disk_serial_#{disk.devid}") { setcode { disk.serial } }
 		end
