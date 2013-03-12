@@ -142,7 +142,7 @@ if Facter.value(:kernel) == "Linux"
 			blockdevs << device
 
 			case device.driver
-			when "ahci", "sata_via"
+			when "ahci", "ata_piix", "sata_via"
 				device.disks << SmartDiskInfo.new(device.device, device.device, "ata")
 			when "3w-9xxx"
 				raise "unknown backing device #{device.device} for 3w-9xxx" unless device.device == "sda"
