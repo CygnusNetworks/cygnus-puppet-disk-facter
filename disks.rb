@@ -13,21 +13,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-def get_driver(device)
-	devpath = File.readlink("/sys/block/#{device}")
-	raise "device #{device} not found" unless devpath
-	parts = devpath.split(/\//)
-	raise "bad link for #{device}" unless parts.shift == ".."
-	raise "bad link for #{device}" unless parts.shift == "devices"
-	raise "non-pci device #{device}" unless parts.first.start_with?("pci")
-	driverlink = ["", "sys", "devices", parts.shift]
-	driverlink.concat(parts.take_while { |p| p.match(/^[0-9a-f:.]+$/i) })
-	driverlink << "driver"
-	driverpath = File.readlink(driverlink.join("/"))
-	raise "no driver for #{device}" unless driverpath
-	return driverpath.split(/\//).last
-end
-
 class BlockInfo
 	attr_accessor :device
 	attr_accessor :raidtype
@@ -37,11 +22,29 @@ class BlockInfo
 		@disks = []
 		@raidtype = nil
 	end
+	def devpath
+		return "/dev/" + @device.sub(/_/, "/")
+	end
+	def syspath
+		return "/sys/block/" + @device.sub(/_/, "!")
+	end
 	def driver
-		@driver ||= get_driver(@device)
+		return @driver if @driver
+		devpath = File.readlink(syspath)
+		raise "device #{device} not found" unless devpath
+		parts = devpath.split(/\//)
+		raise "bad link for #{device}" unless parts.shift == ".."
+		raise "bad link for #{device}" unless parts.shift == "devices"
+		raise "non-pci device #{device}" unless parts.first.start_with?("pci")
+		driverlink = ["", "sys", "devices", parts.shift]
+		driverlink.concat(parts.take_while { |p| p.match(/^[0-9a-f:.]+$/i) })
+		driverlink << "driver"
+		driverpath = File.readlink(driverlink.join("/"))
+		raise "no driver for #{device}" unless driverpath
+		@driver = driverpath.split(/\//).last
 	end
 	def vendor
-		@vendor ||= File.read("/sys/block/#{device}/device/vendor").rstrip
+		@vendor ||= File.read(syspath + "/device/vendor").rstrip
 	end
 end
 
@@ -90,7 +93,7 @@ class SmartDiskInfo < DiskInfo
 		run_smartctl
 	end
 	def run_smartctl
-		output = Facter::Util::Resolution.exec("smartctl -i -d #{@smarttype} /dev/#{@smartdev}")
+		output = Facter::Util::Resolution.exec("smartctl -i -d #{@smarttype} #{@smartdev}")
 		raise "missing smartctl?" unless output
 		self.vendor_model = output[/^Device Model: +(.*)/,1]
 		self.vendor_model = output[/^Product: +(.*)/,1] unless @model
@@ -163,20 +166,31 @@ def twcli_query_disks(devicename, controller)
 	return disks
 end
 
+def discover_blockdevs
+	bdevs = []
+	Dir.glob("/sys/block/sd?") do |path|
+		bdevs << BlockInfo.new(path[/sd./])
+	end
+	Dir.glob("/sys/block/cciss!c?d?") do |path|
+		bdevs << BlockInfo.new(path[/cciss!..../].sub(/!/, "_"))
+	end
+	return bdevs
+end
+
 if Facter.value(:kernel) == "Linux"
 	blockdevs = []
-	Dir.glob("/sys/block/sd?") do |path|
+	discover_blockdevs().each do |device|
 		begin
-			device = BlockInfo.new(path[/sd./])
 			blockdevs << device
 
 			case device.driver
 			when "ahci", "ata_piix", "sata_via"
-				device.disks << SmartDiskInfo.new(device.device, device.device, "ata")
+				device.disks << SmartDiskInfo.new(device.device, device.devpath, "ata")
+			# TODO: when "aacraid"
 			when "megaraid_sas"
 				(0..32).each do |n|
 					begin
-						device.disks << SmartDiskInfo.new("#{device.device}_#{n}", device.device, "megaraid,#{n}")
+						device.disks << SmartDiskInfo.new("#{device.device}_#{n}", device.devpath, "megaraid,#{n}")
 					rescue
 					end
 				end
@@ -192,7 +206,7 @@ if Facter.value(:kernel) == "Linux"
 			when "mptspi"
 				# can be raid or plain scsi device. guess plain scsi device.
 				begin
-					device.disks << SmartDiskInfo.new(device.device, device.device, "scsi")
+					device.disks << SmartDiskInfo.new(device.device, device.devpath, "scsi")
 				rescue
 					Facter.debug "mptspi device #{device.device} appears not to be a disk: " + $!.to_s
 					# maybe the serial was not found, because it is not a disk
@@ -201,7 +215,7 @@ if Facter.value(:kernel) == "Linux"
 						nth = sgpath[/sg(.)/,1]
 						unless FileTest.exist?("#{sgpath}/block") then
 							begin
-								device.disks << SmartDiskInfo.new("#{device.device}_#{nth}", "sg#{nth}", "scsi")
+								device.disks << SmartDiskInfo.new("#{device.device}_#{nth}", "/dev/sg#{nth}", "scsi")
 							rescue
 								# ignore processors and such
 							end
