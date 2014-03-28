@@ -173,21 +173,25 @@ def discover_blockdevs
 	end
 	Dir.glob("/sys/block/cciss!c?d?") do |path|
 		bdevs << BlockInfo.new(path[/cciss!..../].sub(/!/, "_"))
-	end
+  end
 	return bdevs
 end
 
 if Facter.value(:kernel) == "Linux"
 	blockdevs = []
+  Facter.debug "Calling discover_blockdevs"
 	discover_blockdevs().each do |device|
 		begin
+      Facter.debug "Running for device #{device.device}"
 			blockdevs << device
 
 			case device.driver
-			when "ahci", "ata_piix", "sata_via"
+        when "ahci", "ata_piix", "sata_via"
+        Facter.debug "Device #{device.device} is standard (s)ata"
 				device.disks << SmartDiskInfo.new(device.device, device.devpath, "ata")
 			# TODO: when "aacraid"
-			when "megaraid_sas"
+        when "megaraid_sas"
+          Facter.debug "Device #{device} is megaraid_sas"
 				(0..32).each do |n|
 					begin
 						device.disks << SmartDiskInfo.new("#{device.device}_#{n}", device.devpath, "megaraid,#{n}")
@@ -196,14 +200,19 @@ if Facter.value(:kernel) == "Linux"
 				end
 				raise "no disks found for #{device.device}" unless device.disks
 			when "3w-9xxx", "3w-sas", "3w-xxxx"
+        Facter.debug "Device #{device} is 3ware"
 				raise "unknown backing device #{device.device} for #{device.driver}" unless device.device == "sda"
 				controllers = twcli_query_controllers
+        Facter.debug "3Ware found controllers #{controllers}"
 				raise "no tw-cli controllers found" unless controllers
 				# guessing that sda maps to the first existent controller
 				controller = controllers.first
 				device.raidtype = twcli_query_raidtype(controller)
+        Facter.debug "Raid Type is RAID-#{device.raidtype}"
 				device.disks = twcli_query_disks("sda", controller)
+        Facter.debug "Raid disks are #{device.disks}"
 			when "mptspi"
+        Facter.debug "Device #{device} is mpt"
 				# can be raid or plain scsi device. guess plain scsi device.
 				begin
 					device.disks << SmartDiskInfo.new(device.device, device.devpath, "scsi")
@@ -223,6 +232,7 @@ if Facter.value(:kernel) == "Linux"
 					end
 				end
 			when "ehci_hcd", "uhci_hcd"
+        Facter.debug "Device #{device.device} is usb device. ignoring"
 				blockdevs.pop # ignore pluggable usb devices
 			else
 				Facter.debug "unknown driver #{device.driver} for #{device.device}"
@@ -230,9 +240,11 @@ if Facter.value(:kernel) == "Linux"
 		rescue
 			Facter.debug "exception while processing #{device.device}: " + $!.to_s
 		end
-	end
-	Facter.add(:block_devices) { setcode { (blockdevs.collect(&:device)).join(",") } }
+    Facter.debug "Finished information retrieval for device #{device.device}. Adding facts"
+  end
+  Facter.add(:block_devices) { setcode { (blockdevs.collect(&:device)).join(",") } }
 	blockdevs.each do |device|
+    Facter.debug "Adding facts for device #{device.device} vendor #{device.vendor} driver #{device.driver}"
 		Facter.add("block_vendor_#{device.device}") { setcode { device.vendor } }
 		Facter.add("block_driver_#{device.device}") { setcode { device.driver } }
 		Facter.add("block_disks_#{device.device}") { setcode { (device.disks.collect(&:devid)).join(",") } }
@@ -245,5 +257,6 @@ if Facter.value(:kernel) == "Linux"
 			Facter.add("disk_model_#{disk.devid}") { setcode { disk.model } }
 			Facter.add("disk_serial_#{disk.devid}") { setcode { disk.serial } }
 		end
-	end
+    Facter.debug "adding facts finished for device #{device.device}"
+  end
 end
