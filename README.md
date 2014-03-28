@@ -2,7 +2,7 @@ puppet-disk-facter
 ==================
 
 This facter plugin only works on Linux with smartmontools installed. Some
-devices need twcli.
+RAID controllers need the vendor RAID utilities installed to gather additional information (for example tw-cli for 3Ware RAID controllers).
 
 After installing the disk facter (e.g. by dropping `disks.rb` in a directory
 used by facter), you will get the following variables:
