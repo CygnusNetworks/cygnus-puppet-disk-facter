@@ -2,10 +2,19 @@ puppet-disk-facter
 ==================
 
 This facter plugin only works on Linux with smartmontools installed. Some
-devices need twcli.
+RAID controllers need the vendor RAID utilities installed to gather additional information (for example tw-cli for 3Ware RAID controllers).
 
-After installing the disk facter (e.g. by dropping `disks.rb` in a directory
-used by facter), you will get the following variables:
+#Installation
+
+Drop the disks.rb file into a module with the following Directory structure:
+
+ * modules/disk-facter/lib/facter/disks.rb 
+
+in your Puppet Directory.
+
+#Usage
+
+After installing the disk-facter, you will get the following variables:
 
  * `block_devices`: A comma separated list of block device names with the
    leading `/dev/` removed.
@@ -33,4 +42,4 @@ used by facter), you will get the following variables:
 
 To effectively use the disk facter it makes sense to either install twcli on
 every machine or install it based on the listed `block_driver_$DEV` contents.
-Drivers starting with "3w-" tend to require twcli.
+Drivers starting with "3w-" require twcli.
