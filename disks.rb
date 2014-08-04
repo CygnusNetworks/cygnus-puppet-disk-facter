@@ -184,9 +184,6 @@ def discover_blockdevs
   Dir.glob("/sys/block/sd?") do |path|
     bdevs << BlockInfo.new(path[/sd./])
   end
-  Dir.glob("/sys/block/vd?") do |path|
-    bdevs << BlockInfo.new(path[/vd./])
-  end
   Dir.glob("/sys/block/cciss!c?d?") do |path|
     bdevs << BlockInfo.new(path[/cciss!..../].sub(/!/, "_"))
   end
@@ -247,14 +244,11 @@ if Facter.value(:kernel) == "Linux"
               end
             end
           end
-        when "virtio-pci"
-          Facter.debug "Device #{device.device} is virtio device"
         when "ehci_hcd", "uhci_hcd"
           Facter.debug "Device #{device.device} is usb device. ignoring"
           blockdevs.pop # ignore pluggable usb devices
         else
-          Facter.debug "unknown driver #{device.driver} for #{device.device} ignoring"
-          blockdevs.pop # ignore all unknown devices
+          Facter.debug "unknown driver #{device.driver} for #{device.device}"
       end
     rescue
       Facter.debug "exception while processing #{device.device}: " + $!.to_s
@@ -269,8 +263,6 @@ if Facter.value(:kernel) == "Linux"
     Facter.add("block_disks_#{device.device}") { setcode { (device.disks.collect(&:devid)).join(",") } }
     if device.disks.length > 0 then
       Facter.add("block_is_raid_#{device.device}") { setcode { (device.disks.length > 1).to_s } }
-    else
-      Facter.add("block_is_raid_#{device.device}") { setcode { false } }
     end
     Facter.add("block_raidtype_#{device.device}") { setcode { device.raidtype } } if device.raidtype
     device.disks.each do |disk|
