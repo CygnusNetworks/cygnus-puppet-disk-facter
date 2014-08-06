@@ -39,17 +39,29 @@ class BlockInfo
     parts = devpath.split(/\//)
     raise "bad link for #{device}" unless parts.shift == ".."
     raise "bad link for #{device}" unless parts.shift == "devices"
-    raise "non-pci device #{device}" unless parts.first.start_with?("pci")
-    driverlink = ["", "sys", "devices", parts.shift]
-    driverlink.concat(parts.take_while { |p| p.match(/^[0-9a-f:.]+$/i) })
-    driverlink << "driver"
-    driverpath = File.readlink(driverlink.join("/"))
-    raise "no driver for #{device}" unless driverpath
-    @driver = driverpath.split(/\//).last
+    if parts.first == "virtual" then
+      if @device.start_with?('md') then
+        @driver = "swraid"
+      else
+        raise "Unknown driver for virtual device #{device}"
+      end
+    else
+      raise "non-pci device #{device}" unless parts.first.start_with?("pci")
+      driverlink = ["", "sys", "devices", parts.shift]
+      driverlink.concat(parts.take_while { |p| p.match(/^[0-9a-f:.]+$/i) })
+      driverlink << "driver"
+      driverpath = File.readlink(driverlink.join("/"))
+      raise "no driver for #{device}" unless driverpath
+      @driver = driverpath.split(/\//).last
+    end
   end
 
   def vendor
-    @vendor ||= File.read(syspath + "/device/vendor").rstrip
+    if @driver == "swraid" then
+      @vendor = "Linux"
+    else
+      @vendor ||= File.read(syspath + "/device/vendor").rstrip
+    end
   end
 end
 
@@ -184,6 +196,9 @@ def discover_blockdevs
   Dir.glob("/sys/block/sd?") do |path|
     bdevs << BlockInfo.new(path[/sd./])
   end
+  Dir.glob("/sys/block/md?") do |path|
+    bdevs << BlockInfo.new(path[/md./])
+  end
   Dir.glob("/sys/block/cciss!c?d?") do |path|
     bdevs << BlockInfo.new(path[/cciss!..../].sub(/!/, "_"))
   end
@@ -244,6 +259,14 @@ if Facter.value(:kernel) == "Linux"
               end
             end
           end
+        when "swraid"
+          Facter.debug "Device #{device.device} is swraid"
+          device.raidtype ||= File.read(device.syspath + "/md/level")[/^raid(\d+)/, 1]
+          Facter.debug "Raid Type is RAID-#{device.raidtype}"
+          Dir.glob(device.syspath + "/slaves/*") do |path|
+            device.disks << DiskInfo.new(path.split(/\//).last)
+          end
+          Facter.debug "Raid disks are #{device.disks}"
         when "ehci_hcd", "uhci_hcd"
           Facter.debug "Device #{device.device} is usb device. ignoring"
           blockdevs.pop # ignore pluggable usb devices
@@ -265,10 +288,12 @@ if Facter.value(:kernel) == "Linux"
       Facter.add("block_is_raid_#{device.device}") { setcode { (device.disks.length > 1).to_s } }
     end
     Facter.add("block_raidtype_#{device.device}") { setcode { device.raidtype } } if device.raidtype
-    device.disks.each do |disk|
-      Facter.add("disk_vendor_#{disk.devid}") { setcode { disk.vendor } } if disk.vendor
-      Facter.add("disk_model_#{disk.devid}") { setcode { disk.model } }
-      Facter.add("disk_serial_#{disk.devid}") { setcode { disk.serial } }
+    unless device.driver == "swraid" then
+      device.disks.each do |disk|
+        Facter.add("disk_vendor_#{disk.devid}") { setcode { disk.vendor } } if disk.vendor
+        Facter.add("disk_model_#{disk.devid}") { setcode { disk.model } }
+        Facter.add("disk_serial_#{disk.devid}") { setcode { disk.serial } }
+      end
     end
     Facter.debug "adding facts finished for device #{device.device}"
   end
