@@ -239,6 +239,9 @@ if Facter.value(:kernel) == "Linux"
           Facter.debug "Raid Type is RAID-#{device.raidtype}"
           device.disks = twcli_query_disks("sda", controller)
           Facter.debug "Raid disks are #{device.disks}"
+        when "mpt2sas"
+          Facter.debug "Device #{device} is mpt2sas"
+          device.disks << SmartDiskInfo.new(device.device, device.devpath, "auto")
         when "mptspi"
           Facter.debug "Device #{device} is mpt"
           # can be raid or plain scsi device. guess plain scsi device.
