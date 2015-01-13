@@ -1,0 +1,57 @@
+{
+  "name": "CygnusNetworks-disk_facter",
+  "version": "0.0.1",
+  "author": "CygnusNetworks",
+  "summary": "Additional facts about disks/block devices.",
+  "license": "GPL-3.0+",
+  "source": "https://github.com/CygnusNetworks/cygnus-puppet-disk-facter.git",
+  "project_page": "https://github.com/CygnusNetworks/cygnus-puppet-disk-facter",
+  "issues_url": "https://github.com/CygnusNetworks/cygnus-puppet-disk-facter/issues",
+  "tags": [ "facts" ],
+  "dependencies": [
+    {
+      "name": "jhoblitt/smartd",
+      "version_requirement": ">=2.3.0 <3.0.0"
+    }
+  ],
+  "operatingsystem_support": [
+    {
+      "operatingsystem": "RedHat",
+      "operatingsystemrelease": [ "5", "6", "7" ]
+    },
+    {
+      "operatingsystem": "CentOS",
+      "operatingsystemrelease": [ "5", "6", "7" ]
+    },
+    {
+      "operatingsystem": "OracleLinux",
+      "operatingsystemrelease": [ "5", "6", "7" ]
+    },
+    {
+      "operatingsystem": "Scientific",
+      "operatingsystemrelease": [ "5", "6", "7" ]
+    },
+    {
+      "operatingsystem": "SLES",
+      "operatingsystemrelease": [ "10 SP4", "11 SP1", "12" ]
+    },
+    {
+      "operatingsystem": "Debian",
+      "operatingsystemrelease": [ "6", "7" ]
+    },
+    {
+      "operatingsystem": "Ubuntu",
+      "operatingsystemrelease": [ "10.04", "12.04", "14.04" ]
+    }
+  ],
+  "requirements": [
+    {
+      "name": "pe",
+      "version_requirement": "3.x"
+    },
+    {
+      "name": "puppet",
+      "version_requirement": ">=2.7.20 <4.0.0"
+    }
+  ]
+}
