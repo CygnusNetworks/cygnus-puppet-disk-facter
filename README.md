@@ -1,16 +1,25 @@
-puppet-disk-facter
+puppet-disk_facter
 ==================
 
-This facter plugin only works on Linux with smartmontools installed. Some
-RAID controllers need the vendor RAID utilities installed to gather additional information (for example tw-cli for 3Ware RAID controllers).
+This facter plugin only works on Linux with smartmontools installed. Some RAID
+controllers need the vendor RAID utilities installed to gather additional
+information (for example tw-cli for 3Ware RAID controllers).
+
+This module requires
+[jhoblitt/smartd](https://forge.puppetlabs.com/jhoblitt/smartd).  You will need
+to `include '::smartd'` on your Linux nodes to make sure that smartmontools is
+installed.  Additionally, the following RAID utilities can be installed from
+the Puppet Forge to enhance these facts:
+
+* [jhoblitt/tw_3dm2](https://forge.puppetlabs.com/jhoblitt/tw_3dm2)
+* [jhoblitt/megaraid_sm](https://forge.puppetlabs.com/jhoblitt/megaraid_sm)
+* [jhoblitt/mdadm](https://forge.puppetlabs.com/jhoblitt/mdadm)
 
 #Installation
 
-Drop the disks.rb file into a module with the following Directory structure:
-
- * modules/disk-facter/lib/facter/disks.rb 
-
-in your Puppet Directory.
+```
+puppet module install CygnusNetworks-disk_facter
+```
 
 #Usage
 
@@ -42,4 +51,7 @@ After installing the disk-facter, you will get the following variables:
 
 To effectively use the disk facter it makes sense to either install twcli on
 every machine or install it based on the listed `block_driver_$DEV` contents.
-Drivers starting with "3w-" require twcli.
+Drivers starting with "3w-" require twcli. See
+[jhoblitt/tw_3dm2](https://forge.puppetlabs.com/jhoblitt/tw_3dm2) for details
+on how to get PUppet to deploy twcli.
+
