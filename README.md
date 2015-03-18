@@ -5,11 +5,9 @@ This facter plugin only works on Linux with smartmontools installed. Some RAID
 controllers need the vendor RAID utilities installed to gather additional
 information (for example tw-cli for 3Ware RAID controllers).
 
-This module requires
-[jhoblitt/smartd](https://forge.puppetlabs.com/jhoblitt/smartd).  You will need
-to `include '::smartd'` on your Linux nodes to make sure that smartmontools is
-installed.  Additionally, the following RAID utilities can be installed from
-the Puppet Forge to enhance these facts:
+You need to take care to install the raid utilities yourself.
+
+You might consider using jhoblitt modules:
 
 * [jhoblitt/tw_3dm2](https://forge.puppetlabs.com/jhoblitt/tw_3dm2)
 * [jhoblitt/megaraid_sm](https://forge.puppetlabs.com/jhoblitt/megaraid_sm)
