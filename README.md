@@ -7,7 +7,7 @@ information (for example tw-cli for 3Ware RAID controllers).
 
 You need to take care to install the raid utilities yourself.
 
-You might consider using jhoblitt modules:
+You might consider using jhoblitt modules. See:
 
 * [jhoblitt/tw_3dm2](https://forge.puppetlabs.com/jhoblitt/tw_3dm2)
 * [jhoblitt/megaraid_sm](https://forge.puppetlabs.com/jhoblitt/megaraid_sm)
@@ -16,7 +16,7 @@ You might consider using jhoblitt modules:
 #Installation
 
 ```
-puppet module install CygnusNetworks-disk_facter
+puppet module install cygnusnetworks-disk_facter
 ```
 
 #Usage
@@ -47,9 +47,7 @@ After installing the disk-facter, you will get the following variables:
    + `disk_serial_$DISK`: A vendor specific representation of the serial
      number of the disk.
 
-To effectively use the disk facter it makes sense to either install twcli on
+To effectively use the disk facts it makes sense to either install twcli on
 every machine or install it based on the listed `block_driver_$DEV` contents.
-Drivers starting with "3w-" require twcli. See
-[jhoblitt/tw_3dm2](https://forge.puppetlabs.com/jhoblitt/tw_3dm2) for details
-on how to get PUppet to deploy twcli.
+Drivers starting with "3w-" require twcli. 
 
