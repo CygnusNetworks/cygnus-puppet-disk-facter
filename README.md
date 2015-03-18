@@ -21,7 +21,7 @@ puppet module install cygnus-disk_facter
 
 #Usage
 
-After installing the disk-facter, you will get the following variables:
+After installing the disk_facter, you will get the following variables:
 
  * `block_devices`: A comma separated list of block device names with the
    leading `/dev/` removed.
