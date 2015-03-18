@@ -1,19 +1,14 @@
 {
   "name": "CygnusNetworks-disk_facter",
-  "version": "0.0.1",
-  "author": "CygnusNetworks",
+  "version": "0.1.0",
+  "author": "Cygnus Networks GmbH",
   "summary": "Additional facts about disks/block devices.",
   "license": "GPL-3.0+",
   "source": "https://github.com/CygnusNetworks/cygnus-puppet-disk-facter.git",
   "project_page": "https://github.com/CygnusNetworks/cygnus-puppet-disk-facter",
   "issues_url": "https://github.com/CygnusNetworks/cygnus-puppet-disk-facter/issues",
   "tags": [ "facts" ],
-  "dependencies": [
-    {
-      "name": "jhoblitt/smartd",
-      "version_requirement": ">=2.3.0 <3.0.0"
-    }
-  ],
+  "dependencies": [],
   "operatingsystem_support": [
     {
       "operatingsystem": "RedHat",
