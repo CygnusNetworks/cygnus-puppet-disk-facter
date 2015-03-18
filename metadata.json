@@ -1,5 +1,5 @@
 {
-  "name": "cygnusnetworks-disk_facter",
+  "name": "cygnus-disk_facter",
   "version": "0.1.0",
   "author": "Cygnus Networks GmbH",
   "summary": "Additional facts about disks/block devices.",

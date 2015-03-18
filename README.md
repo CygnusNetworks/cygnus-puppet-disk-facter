@@ -16,7 +16,7 @@ You might consider using jhoblitt modules. See:
 #Installation
 
 ```
-puppet module install cygnusnetworks-disk_facter
+puppet module install cygnus-disk_facter
 ```
 
 #Usage
