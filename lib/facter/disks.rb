@@ -157,6 +157,11 @@ Facter.add(:twcli_path) do
   setcode { find_path("tw-cli") || find_path("tw_cli") }
 end
 
+Facter.add(:arcconf_path) do
+  confine :kernel => "Linux"
+  setcode { find_path("arcconf") }
+end
+
 def twcli_exec(command)
   twcli = Facter.value(:twcli_path)
   raise "no tw-cli tool found" unless twcli
@@ -185,8 +190,41 @@ def twcli_query_disks(devicename, controller)
     model = twcli_exec("#{portpath} show model")[/ = (.*)/, 1]
     raise "no model found for tw-cli #{portpath}" unless model
     serial = twcli_exec("#{portpath} show serial")[/ = (.*)/, 1]
-    raise "no serial found for tw-cli #{portpath}" unless model
+    raise "no serial found for tw-cli #{portpath}" unless model  # FIXME
     disks << DumbDiskInfo.new("#{devicename}_#{port}", nil, model, serial)
+  end
+  return disks
+end
+
+def arcconf_exec(controller, command, param)
+  arcconf = Facter.value(:arcconf_path)
+  raise "no arcconf tool found" unless arcconf
+  output = Facter::Util::Resolution.exec("#{arcconf} #{command} #{controller} #{param}")
+  raise "no output from arcconfig #{command}. Binary missing?" unless output
+  return output
+end
+
+def aacraid_query_raidtype(controller)
+  raidtype = arcconf_exec(controller, "GETCONFIG", "LD")[/^\W+RAID level\W+: ([0-9]+)/, 1]
+  raise "unable to detect raidtype for controller #{controller}" unless raidtype
+  return raidtype
+end
+
+def aacraid_query_disks(devicename, controller)
+  output = arcconf_exec(controller, "GETCONFIG", "PD")
+  disks = []
+  output.split(/(?=Device #)/).each do |raid_device|
+    if raid_device =~ /Device is a Hard drive/
+      port = raid_device.match(/^Device #([0-9])$/m)[1]
+      Facter.debug "found port #{port}"
+      model = raid_device.match(/^\W+Model\W+: (.*?)$/m)[1]
+      raise "no model found for aacraid #{port}" unless model
+      serial = raid_device.match(/^\W+Serial number\W+: (.*?)$/m)[1]
+      raise "no serial found for aacraid #{port}" unless serial
+      disks << DumbDiskInfo.new("#{devicename}_#{port}", nil, model, serial)
+    else
+      Facter.debug "Device is not a hard drive"
+    end
   end
   return disks
 end
@@ -217,7 +255,15 @@ if Facter.value(:kernel) == "Linux"
         when "ahci", "ata_piix", "sata_via"
           Facter.debug "Device #{device.device} is standard (s)ata"
           device.disks << SmartDiskInfo.new(device.device, device.devpath, "ata")
-        # TODO: when "aacraid"
+        when "aacraid"
+          Facter.debug "Device #{device} is aacraid"
+          raise "unknown backing device #{device.device} for #{device.driver}" unless device.device == "sda"
+          # guessing that sda maps to controller 1
+          controller = 1
+          device.raidtype = aacraid_query_raidtype(controller)
+          Facter.debug "Raid Type is RAID-#{device.raidtype}"
+          device.disks = aacraid_query_disks(device.device, controller)
+          Facter.debug "Raid disks are #{device.disks}"
         when "megaraid_sas"
           Facter.debug "Device #{device} is megaraid_sas"
           (0..32).each do |n|
