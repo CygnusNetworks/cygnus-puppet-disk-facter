@@ -190,7 +190,7 @@ def twcli_query_disks(devicename, controller)
     model = twcli_exec("#{portpath} show model")[/ = (.*)/, 1]
     raise "no model found for tw-cli #{portpath}" unless model
     serial = twcli_exec("#{portpath} show serial")[/ = (.*)/, 1]
-    raise "no serial found for tw-cli #{portpath}" unless model  # FIXME
+    raise "no serial found for tw-cli #{portpath}" unless serial
     disks << DumbDiskInfo.new("#{devicename}_#{port}", nil, model, serial)
   end
   return disks
