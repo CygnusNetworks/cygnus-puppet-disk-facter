@@ -1,8 +1,8 @@
 Puppet Disk Facts Plugin
 ========================
 
-This is a Puppet facter plugin to help to determine block devices connected to common RAID controllers and Linux software RAID arrays. The plugin will generate facts for detected RAID levels and disk types and serials. Disks connected to standard SATA/ATA (onboard) are also included.
-The plugin will generate a fact for the detected RAID controller and driver, try to determine the used RAID level and also generates a list of connected disks including information about vendor, disk model and serial numbers as puppet facts.
+This is a Puppet facter plugin to help to determine block devices connected to common RAID controllers and Linux software RAID arrays. The plugin will generate facts for detected RAID levels, disk types and disk serials. Disks connected to standard SATA/ATA (onboard) are also included.
+The plugin will generate a fact for the detected RAID controller and driver, try to determine the used RAID level and also generates a list of disks connected to the RAID controllers including information about vendor, disk model and serial numbers as puppet facts.
 
 The plugin relies on the vendor specific tools for RAID controllers to be installed, when using a hardware RAID controller Currently the following hardware RAID controllers are supported:
 
@@ -22,9 +22,11 @@ For support for the RAID controllers you will need to install the vendor specifi
 * [jhoblitt/megaraid_sm](https://forge.puppetlabs.com/jhoblitt/megaraid_sm)
 * [jhoblitt/mdadm](https://forge.puppetlabs.com/jhoblitt/mdadm)
 
-#Example output
+You can decide which tool you need to install by checking the variables `block_devices` and `block_driver_DEV` variables.
 
-You will something similar to the following output, when you are using this plugin with a hardware RAID controller:
+#Example facter output
+
+You will get something similar to the following output, when you are using this plugin with a hardware RAID controller:
 
 ```
 facter -p|egrep -e "(^disk_|^block_)"
@@ -60,7 +62,7 @@ disk_vendor_sda_6 => TOSHIBA
 disk_vendor_sda_7 => TOSHIBA
 ```
 
-For a software RAID you will get something like this:
+For a software RAID output should look like this:
 
 ```
 facter -p|egrep "(^block_|^disk_)"
