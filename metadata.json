@@ -1,6 +1,6 @@
 {
   "name": "cygnus-disk_facter",
-  "version": "0.2.1",
+  "version": "0.2",
   "author": "Cygnus Networks GmbH",
   "summary": "Additional facts about disks/block devices.",
   "license": "GPL-3.0+",
