@@ -1,10 +1,10 @@
-puppet-disk_facter
-==================
+Puppet Disk Facts Plugin
+========================
 
-This is a Puppet facter plugin to help to determine block devices connected to common RAID controllers,Linux software RAID arrays. In addition connected disks to standard SATA/ATA (onboard) controllers are also listed. 
-The plugin will generate a fact for the detected RAID controller and driver, try to determine the used RAID level and also generates a list of connected disks including information about vendors, models and serial numbers as facts.
+This is a Puppet facter plugin to help to determine block devices connected to common RAID controllers and Linux software RAID arrays. The plugin will generate facts for detected RAID levels and disk types and serials. Disks connected to standard SATA/ATA (onboard) are also included.
+The plugin will generate a fact for the detected RAID controller and driver, try to determine the used RAID level and also generates a list of connected disks including information about vendor, disk model and serial numbers as puppet facts.
 
-The plugin relies on the vendor specific tools for RAID controllers to be installed, when using a hardware RAID controller. Currently the following hardware RAID controllers are supported:
+The plugin relies on the vendor specific tools for RAID controllers to be installed, when using a hardware RAID controller Currently the following hardware RAID controllers are supported:
 
 * 3Ware (now AMCC/Avago), including 7xxx, 8xxx, 9xxx and SAS controllers
 * Adaptec AAC Raid
@@ -14,9 +14,9 @@ The plugin relies on the vendor specific tools for RAID controllers to be instal
 In addition the following software RAID and standard disks are supported:
 
 * Linux Software RAID
-* ATA/SATA disks (using ahci, ata_piix, sata_via driver)
+* ATA/SATA disks (using ahci, ata_piix, sata_via drivers)
 
-For support for the RAID controllers you will need to install the vendor specific tools. You need to take care to install the raid utilities yourself. You might consider using jhoblitt Puppet modules to achieve this. See:
+For support for the RAID controllers you will need to install the vendor specific tools. You need to install the raid utilities yourself. To automate things you might consider using jhoblitt Puppet modules. See:
 
 * [jhoblitt/tw_3dm2](https://forge.puppetlabs.com/jhoblitt/tw_3dm2)
 * [jhoblitt/megaraid_sm](https://forge.puppetlabs.com/jhoblitt/megaraid_sm)
@@ -24,7 +24,7 @@ For support for the RAID controllers you will need to install the vendor specifi
 
 #Example output
 
-You will something similar to the following output, when you are using this plugin:
+You will something similar to the following output, when you are using this plugin with a hardware RAID controller:
 
 ```
 facter -p|egrep -e "(^disk_|^block_)"
@@ -58,6 +58,37 @@ disk_vendor_sda_4 => TOSHIBA
 disk_vendor_sda_5 => TOSHIBA
 disk_vendor_sda_6 => TOSHIBA
 disk_vendor_sda_7 => TOSHIBA
+```
+
+For a software RAID you will get something like this:
+
+```
+facter -p|egrep "(^block_|^disk_)"
+block_devices => sda,sdb,md0,md1
+block_disks_md0 => sda5,sdb5
+block_disks_md1 => sda6,sdb6
+block_disks_sda => sda
+block_disks_sdb => sdb
+block_driver_md0 => swraid
+block_driver_md1 => swraid
+block_driver_sda => ahci
+block_driver_sdb => ahci
+block_is_raid_md0 => true
+block_is_raid_md1 => true
+block_is_raid_sda => false
+block_is_raid_sdb => false
+block_raidtype_md0 => 1
+block_raidtype_md1 => 1
+block_vendor_md0 => Linux
+block_vendor_md1 => Linux
+block_vendor_sda => ATA
+block_vendor_sdb => ATA
+disk_model_sda => SSDSC2BB120G4
+disk_model_sdb => SSDSC2BB120G4
+disk_serial_sda => BTWL3396**********
+disk_serial_sdb => BTWL3396**********
+disk_vendor_sda => INTEL
+disk_vendor_sdb => INTEL
 ```
 
 #Installation
