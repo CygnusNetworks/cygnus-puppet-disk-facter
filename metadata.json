@@ -7,7 +7,7 @@
   "source": "https://github.com/CygnusNetworks/cygnus-puppet-disk-facter.git",
   "project_page": "https://github.com/CygnusNetworks/cygnus-puppet-disk-facter",
   "issues_url": "https://github.com/CygnusNetworks/cygnus-puppet-disk-facter/issues",
-  "tags": [ "facts" ],
+  "tags": [ "storage", "raid", "adaptec", "3ware", "lsi", "megaraid", "mdadm", "md", "facts", "facter", "centos", "debian", "redhat", "rhel"],
   "dependencies": [],
   "operatingsystem_support": [
     {
