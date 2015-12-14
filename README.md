@@ -1,10 +1,10 @@
 Puppet Disk Facts Plugin
 ========================
 
-This is a Puppet facter plugin to help to determine block devices connected to common RAID controllers and Linux software RAID arrays. The plugin will generate facts for detected RAID levels, disk types and disk serials. Disks connected to standard SATA/ATA (onboard) are also included.
-The plugin will generate a fact for the detected RAID controller and driver, try to determine the used RAID level and also generates a list of disks connected to the RAID controllers including information about vendor, disk model and serial numbers as puppet facts.
+This is a Puppet facter plugin to help to determine block devices connected to common RAID controllers and Linux software RAID arrays. The plugin will generate facts for detected RAID levels and disks. Disks connected to standard SATA/ATA (onboard controllers) are also included.
+The plugin will generate a fact for the detected RAID controller and driver, try to determine the used RAID level and also generates a list of disks connected to the RAID controllers including information about vendor, disk model and serial numbers as puppet facts. The provided data might be used to inventory the provided information for documentation or other use.
 
-The plugin relies on the vendor specific tools for RAID controllers to be installed, when using a hardware RAID controller Currently the following hardware RAID controllers are supported:
+The plugin relies on the vendor specific tools for RAID controllers to be installed, when using a hardware RAID controller. Currently the following hardware RAID controllers are supported:
 
 * 3Ware (now AMCC/Avago), including 7xxx, 8xxx, 9xxx and SAS controllers
 * Adaptec AAC Raid
