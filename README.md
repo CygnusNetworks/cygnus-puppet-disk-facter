@@ -1,6 +1,8 @@
 Puppet Disk Facts Plugin
 ========================
 
+[![Build Status](https://travis-ci.org/CygnusNetworks/cygnus-puppet-disk-facter.png)](https://travis-ci.org/CygnusNetworks/cygnus-puppet-disk-facter)
+
 This is a Puppet facter plugin to help to determine block devices connected to common RAID controllers and Linux software RAID arrays. The plugin will generate facts for detected RAID levels, disk types and disk serials. Disks connected to standard SATA/ATA (onboard) are also included.
 The plugin will generate a fact for the detected RAID controller and driver, try to determine the used RAID level and also generates a list of disks connected to the RAID controllers including information about vendor, disk model and serial numbers as puppet facts.
 
