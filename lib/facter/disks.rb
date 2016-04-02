@@ -45,6 +45,8 @@ class BlockInfo
       else
         raise "Unknown driver for virtual device #{device}"
       end
+    elsif parts.first == "platform" then
+      Facter.debug("device #{device} is on a pseudo bus, ignoring")
     else
       raise "non-pci device #{device}" unless parts.first.start_with?("pci")
       driverlink = ["", "sys", "devices", parts.shift]
