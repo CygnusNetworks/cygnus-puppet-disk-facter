@@ -17,11 +17,13 @@ class BlockInfo
   attr_accessor :device
   attr_accessor :raidtype
   attr_accessor :disks
+  attr_accessor :controller
 
   def initialize(device)
     @device = device
     @disks = []
     @raidtype = nil
+    @controller = nil
   end
 
   def devpath
@@ -193,7 +195,7 @@ def twcli_query_disks(devicename, controller)
     raise "no model found for tw-cli #{portpath}" unless model
     serial = twcli_exec("#{portpath} show serial")[/ = (.*)/, 1]
     raise "no serial found for tw-cli #{portpath}" unless serial
-    disks << DumbDiskInfo.new("#{devicename}_#{port}", nil, model, serial)
+    disks << DumbDiskInfo.new("#{controller}_#{port}", nil, model, serial)
   end
   return disks
 end
@@ -287,6 +289,8 @@ if Facter.value(:kernel) == "Linux"
           Facter.debug "Raid Type is RAID-#{device.raidtype}"
           device.disks = twcli_query_disks("sda", controller)
           Facter.debug "Raid disks are #{device.disks}"
+	  device.controller = controller
+          Facter.debug "Controller is #{device.controller}"
         when "mpt2sas"
           Facter.debug "Device #{device} is mpt2sas"
           device.disks << SmartDiskInfo.new(device.device, device.devpath, "auto")
@@ -331,9 +335,12 @@ if Facter.value(:kernel) == "Linux"
   end
   Facter.add(:block_devices) { setcode { (blockdevs.collect(&:device)).join(",") } }
   blockdevs.each do |device|
-    Facter.debug "Adding facts for device #{device.device} vendor #{device.vendor} driver #{device.driver}"
+    Facter.debug "Adding facts for device '#{device.device}' vendor '#{device.vendor}' driver '#{device.driver}' controller '#{device.controller}'"
     Facter.add("block_vendor_#{device.device}") { setcode { device.vendor } }
     Facter.add("block_driver_#{device.device}") { setcode { device.driver } }
+    if !device.controller.nil?
+      Facter.add("block_controller_#{device.device}") { setcode { device.controller } }
+    end
     Facter.add("block_disks_#{device.device}") { setcode { (device.disks.collect(&:devid)).join(",") } }
     if device.disks.length > 0 then
       Facter.add("block_is_raid_#{device.device}") { setcode { (device.disks.length > 1).to_s } }
