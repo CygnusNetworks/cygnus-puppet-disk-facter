@@ -293,7 +293,24 @@ if Facter.value(:kernel) == "Linux"
           Facter.debug "Controller is #{device.controller}"
         when "mpt2sas"
           Facter.debug "Device #{device} is mpt2sas"
-          device.disks << SmartDiskInfo.new(device.device, device.devpath, "auto")
+          begin
+            device.disks << SmartDiskInfo.new(device.device, device.devpath, "auto")
+          rescue
+            Facter.debug "mpt2sas device #{device.device} appears not to be a disk: " + $!.to_s
+            # maybe the serial was not found, because it is not a disk
+            # we assume that this is a raid and all unassigned sg devices belong to it
+            Dir.glob("/sys/class/scsi_generic/sg?/device") do |sgpath|
+              nth = sgpath[/sg(.)/, 1]
+              unless FileTest.exist?("#{sgpath}/block") then
+                begin
+                  Facter.debug "mpt2sas device sg#{nth} will be added: " + $!.to_s
+                  device.disks << SmartDiskInfo.new("sg#{nth}", "/dev/sg#{nth}", "scsi")
+                rescue
+                  # ignore processors and such
+                end
+              end
+            end
+          end
         when "mptspi"
           Facter.debug "Device #{device} is mpt"
           # can be raid or plain scsi device. guess plain scsi device.
