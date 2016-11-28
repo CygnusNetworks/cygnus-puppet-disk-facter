@@ -36,6 +36,16 @@ class BlockInfo
 
   def driver
     return @driver if @driver
+    if not File.symlink?(syspath)
+      Facter.debug("very old kernel, /sys/block do not contains symlink. Limited support.")
+      if @device.start_with?('md') then
+        Facter.debug("driver is swraid")
+        @driver = "swraid"
+        return @driver
+       else
+        raise "Unknown driver for old kernel device #{device}"
+       end
+    end
     devpath = File.readlink(syspath)
     raise "device #{device} not found" unless devpath
     parts = devpath.split(/\//)
@@ -148,7 +158,7 @@ class SmartDiskInfo < DiskInfo
 end
 
 def find_path(tool)
-  minimal_path = ["/bin", "/sbin", "/usr/bin", "/usr/sbin"]
+  minimal_path = ["/bin", "/sbin", "/usr/bin", "/usr/sbin", "/opt/bin" ]
   (Facter.value(:path).split(":") + minimal_path).each do |dir|
     toolpath = "#{dir}/#{tool}"
     return toolpath if FileTest.executable?(toolpath)
@@ -291,7 +301,7 @@ if Facter.value(:kernel) == "Linux"
           Facter.debug "Raid disks are #{device.disks}"
 	  device.controller = controller
           Facter.debug "Controller is #{device.controller}"
-        when "mpt2sas"
+        when "mpt2sas", "mpt3sas"
           Facter.debug "Device #{device} is mpt2sas"
           begin
             device.disks << SmartDiskInfo.new(device.device, device.devpath, "auto")
