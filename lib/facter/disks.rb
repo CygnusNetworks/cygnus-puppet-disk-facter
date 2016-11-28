@@ -299,7 +299,7 @@ if Facter.value(:kernel) == "Linux"
           Facter.debug "Raid Type is RAID-#{device.raidtype}"
           device.disks = twcli_query_disks("sda", controller)
           Facter.debug "Raid disks are #{device.disks}"
-	  device.controller = controller
+          device.controller = controller
           Facter.debug "Controller is #{device.controller}"
         when "mpt2sas", "mpt3sas"
           Facter.debug "Device #{device} is mpt2sas"
