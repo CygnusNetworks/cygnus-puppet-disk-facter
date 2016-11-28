@@ -258,9 +258,28 @@ def discover_blockdevs
 end
 
 if Facter.value(:kernel) == "Linux"
+  aacraid_cnt = 0
+  threeware_cnt = 0
   blockdevs = []
   Facter.debug "Calling discover_blockdevs"
-  discover_blockdevs().each do |device|
+  devs = discover_blockdevs
+  devs.each do |device|
+    case device.driver
+      when "aacraid"
+        aacraid_cnt += 1
+      when "3w-9xxx", "3w-sas", "3w-xxxx"
+        threeware_cnt += 1
+    end
+  end
+
+  if threeware_cnt > 1 then
+    Facter.warn "Found more than one 3ware RAID device - only one logical RAID device is supported"
+  end
+  if aacraid_cnt > 1 then
+    Facter.warn "Found more than one aacraid RAID device - only one logical RAID device is supported"
+  end
+
+  devs.each do |device|
     begin
       Facter.debug "Running for device #{device.device}"
       blockdevs << device
@@ -270,14 +289,15 @@ if Facter.value(:kernel) == "Linux"
           Facter.debug "Device #{device.device} is standard (s)ata"
           device.disks << SmartDiskInfo.new(device.device, device.devpath, "ata")
         when "aacraid"
-          Facter.debug "Device #{device} is aacraid"
-          raise "unknown backing device #{device.device} for #{device.driver}" unless device.device == "sda"
-          # guessing that sda maps to controller 1
-          controller = 1
-          device.raidtype = aacraid_query_raidtype(controller)
-          Facter.debug "Raid Type is RAID-#{device.raidtype}"
-          device.disks = aacraid_query_disks(device.device, controller)
-          Facter.debug "Raid disks are #{device.disks}"
+          if aacraid_cnt <= 1 then
+            Facter.debug "Device #{device} is aacraid"
+            # guessing that current device maps to controller 1
+            controller = 1
+            device.raidtype = aacraid_query_raidtype(controller)
+            Facter.debug "Raid Type is RAID-#{device.raidtype}"
+            device.disks = aacraid_query_disks(device.device, controller)
+            Facter.debug "Raid disks are #{device.disks}"
+          end
         when "megaraid_sas"
           Facter.debug "Device #{device} is megaraid_sas"
           (0..32).each do |n|
@@ -289,18 +309,19 @@ if Facter.value(:kernel) == "Linux"
           raise "no disks found for #{device.device}" unless device.disks
         when "3w-9xxx", "3w-sas", "3w-xxxx"
           Facter.debug "Device #{device} is 3ware"
-          raise "unknown backing device #{device.device} for #{device.driver}" unless device.device == "sda"
-          controllers = twcli_query_controllers
-          Facter.debug "3Ware found controllers #{controllers}"
-          raise "no tw-cli controllers found" unless controllers
-          # guessing that sda maps to the first existent controller
-          controller = controllers.first
-          device.raidtype = twcli_query_raidtype(controller)
-          Facter.debug "Raid Type is RAID-#{device.raidtype}"
-          device.disks = twcli_query_disks("sda", controller)
-          Facter.debug "Raid disks are #{device.disks}"
-          device.controller = controller
-          Facter.debug "Controller is #{device.controller}"
+          if threeware_cnt <= 1 then
+            controllers = twcli_query_controllers
+            Facter.debug "3Ware found controllers #{controllers}"
+            raise "no tw-cli controllers found" unless controllers
+            # guessing that sda maps to the first existent controller
+            controller = controllers.first
+            device.raidtype = twcli_query_raidtype(controller)
+            Facter.debug "Raid Type is RAID-#{device.raidtype}"
+            device.disks = twcli_query_disks("sda", controller)
+            Facter.debug "Raid disks are #{device.disks}"
+            device.controller = controller
+            Facter.debug "Controller is #{device.controller}"
+          end
         when "mpt2sas", "mpt3sas"
           Facter.debug "Device #{device} is mpt2sas"
           begin
