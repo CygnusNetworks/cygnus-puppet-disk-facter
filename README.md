@@ -24,7 +24,7 @@ For support for the RAID controllers you will need to install the vendor specifi
 
 You can decide which tool you need to install by checking the variables `block_devices` and `block_driver_DEV` variables.
 
-#Example facter output
+# Example facter output
 
 You will get something similar to the following output, when you are using this plugin with a hardware RAID controller:
 
@@ -93,13 +93,13 @@ disk_vendor_sda => INTEL
 disk_vendor_sdb => INTEL
 ```
 
-#Installation
+# Installation
 
 ```
 puppet module install cygnus-disk_facter
 ```
 
-#Usage
+# Usage
 
 After installing the disk_facter, you will get the following variables:
 
