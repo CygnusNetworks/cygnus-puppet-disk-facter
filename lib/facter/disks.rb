@@ -322,7 +322,7 @@ if Facter.value(:kernel) == "Linux"
             device.controller = controller
             Facter.debug "Controller is #{device.controller}"
           end
-        when "mpt2sas", "mpt3sas"
+        when "mptsas", "mpt2sas", "mpt3sas"
           Facter.debug "Device #{device} is mpt2sas"
           begin
             device.disks << SmartDiskInfo.new(device.device, device.devpath, "auto")
@@ -335,7 +335,11 @@ if Facter.value(:kernel) == "Linux"
               unless FileTest.exist?("#{sgpath}/block") then
                 begin
                   Facter.debug "mpt2sas device sg#{nth} will be added: " + $!.to_s
-                  device.disks << SmartDiskInfo.new("sg#{nth}", "/dev/sg#{nth}", "scsi")
+                  if device.driver == "mptsas" then
+                    device.disks << SmartDiskInfo.new("sg#{nth}", "/dev/sg#{nth}", "auto")
+                  else
+                    device.disks << SmartDiskInfo.new("sg#{nth}", "/dev/sg#{nth}", "scsi")
+                  end
                 rescue
                   # ignore processors and such
                 end
