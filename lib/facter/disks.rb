@@ -60,9 +60,13 @@ class BlockInfo
     elsif parts.first == "platform" then
       Facter.debug("device #{device} is on a pseudo bus, ignoring")
     else
-      raise "non-pci device #{device}" unless parts.first.start_with?("pci")
+      raise "non-pci device #{device}" unless parts.first =~ /^(pci|LNXSYSTM)/
       driverlink = ["", "sys", "devices", parts.shift]
-      driverlink.concat(parts.take_while { |p| p.match(/^[0-9a-f:.]+$/i) })
+      if driverlink.last.start_with?("pci")
+        driverlink.concat(parts.take_while { |p| p.match(/^[0-9a-f:.]+$/i) })
+      else
+        driverlink.concat(parts.take_while { |p| not p.match(/^host[0-9]/) })
+      end
       driverlink << "driver"
       driverpath = File.readlink(driverlink.join("/"))
       raise "no driver for #{device}" unless driverpath
